@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <title>TreeView</title>
+    <!-- Bootstrap core CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KyZXEAg3QhqLMpG8r+8fhAXLRk2vvoC2f3B09zVXn8CA5QIVfZOJ3BCsw2P0p/We" crossorigin="anonymous">
+<style type="text/css">
+    .treeview { padding: 0; clear: both; width: 100%; }
+    .treeview * {  }
+    .treeview ul
+    {
+        overflow: hidden; width: 100%; margin: 0; padding: 0 0 1.5em 0;
+        list-style-type: none;
+    }
+    .treeview ul ul { overflow: visible; width: auto; margin: 0 0 0 0; padding: 0 0 0 0.75em; }
+    /* класс для ul после которых нет li в родительских ветках */
+    .treeview ul.l { border-left: 1px solid; margin-left: -1px; }
+    .treeview li.cl ul { display: none; }
+    .treeview li { margin: 0; padding: 0; }
+    .treeview li li { margin: 0 0 0 0.5em; border-left: 1px dotted; padding: 0; }
+    .treeview li div { position: relative; height: 1.5em; min-height: 16px; }
+    .treeview li li div { border-bottom: 1px dotted; }
+    .treeview li p
+    {
+        position: absolute; z-index: 1; top: 0.8em; //top: 0.65em; left: 1.75em;
+        width: 100%; margin: 0; border-bottom: 1px dashed; padding: 0;
+    }
+    .treeview a { padding: 0.1em 0.2em; white-space: nowrap; //height: 1px; }
+    .treeview a.sc
+    {
+        font-family: Arial, sans-serif;
+        margin-left: -1em; padding: 0; text-decoration: none;
+    }
+
+    /* colors */
+    .treeview li p,
+    .treeview img.i,
+    .treeview .sc
+    { background: white; }
+    .treeview ul.l,
+    .treeview li p
+    { border-color: #f5f5ea; }
+    .treeview ul li li,
+    .treeview ul li li div
+    { border-color: #999999; }
+    .treeview a,
+    .treeview a.sc,
+    .treeview a.sc:hover
+    { color: #000000; }
+    .treeview a:hover
+    { color: #cc0000; cursor:pointer; }
+</style>
+<script type="text/javascript">
+var getJSON = function(url, callback, obj) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = 'json';
+    xhr.onload = function() {
+      var status = xhr.status;
+      if (status === 200) {
+        callback(null, xhr.response, obj);
+      } else {
+        callback(status, xhr.response, obj);
+      }
+    };
+    xhr.send();
+};
+</script>
+  </head>
+  <body>
+
+<script type="text/javascript">
+    function addToTree(root, els, elstype) {
+        var treeview = root.closest('.treeview');
+        var symbolClosed = treeview.getAttribute('symbol-closed');
+        var symbolOpened = treeview.getAttribute('symbol-opened');
+        els.forEach(function (el) {
+            let newli = document.createElement('li');
+            let newdiv = document.createElement('div');
+            let newp = document.createElement('p');
+            let text = document.createTextNode((elstype == 'detal') ? el : el.name);
+            //if (elstype == 'detal') { text = document.createTextNode(el);}
+            //else { text = document.createTextNode(el.name); }
+            if (elstype != 'detal' && (elstype == 'employee' || elstype == 'department')) {
+                let newa = document.createElement('a');
+                let newspan = document.createElement('span');
+                newspan.innerHTML = symbolClosed;
+                newa.className = 'sc';
+                newa.setAttribute(elstype,el.id);
+                newa.appendChild(newspan);
+                newa.appendChild(text);
+                newa.addEventListener('click', function (event) { eventClick(event); });
+                newp.appendChild(newa);
+            }
+            else {
+                newp.appendChild(text);
+            }
+            newdiv.appendChild(newp);
+            newli.appendChild(newdiv);
+            root.getElementsByTagName('a')[0].setAttribute('data-load','loaded');
+            root.getElementsByTagName('ul')[0].appendChild(newli);
+        });
+    }
+
+    function dataload(err, data, li) {
+        if (err == null) {
+            let delli = li.getElementsByTagName('li')[0]
+            delli.parentNode.removeChild(delli);
+            if (data.hasOwnProperty('departments')) {
+                addToTree(li, data.departments, 'department');
+            }
+            if (data.hasOwnProperty('employees')) {
+                addToTree(li, data.employees, 'employee');
+            }
+            if (data.hasOwnProperty('detal')) {
+                addToTree(li, data.detal, 'detal');
+            }
+        }
+        else {
+            alert('Ошибка загрузки');
+            alert(err);
+        }
+    }
+
+    function toggleTree( eThis ){
+        var treeview = eThis.closest('.treeview');
+        var symbolClosed = treeview.getAttribute('symbol-closed');
+        var symbolOpened = treeview.getAttribute('symbol-opened');
+
+        if (!eThis.hasAttribute('data-load')) {
+            eThis.setAttribute('data-load','loading');
+            let li = eThis.closest('li');
+            let newli = document.createElement('li');
+            let newdiv = document.createElement('div');
+            let newp = document.createElement('p');
+            newp.innerHTML = 'загрузка...';
+            newdiv.appendChild(newp);
+            newli.appendChild(newdiv);
+            let newul = document.createElement('ul');
+            newul.appendChild(newli);
+            li.appendChild(newul);
+            if (eThis.getAttribute('department') == 'root') {
+                getJSON('{% url 'treeview-api-root' %}', dataload, li);
+            }
+            else if (eThis.hasAttribute('department')) {
+                getJSON('{% url 'treeview-api' %}/'+eThis.getAttribute('department'), dataload, li);
+            }
+            else if (eThis.hasAttribute('employee')) {
+                getJSON('{% url 'treeview-api' %}/detal/'+eThis.getAttribute('employee'), dataload, li);
+            }
+        }
+
+        if( eThis.getElementsByTagName('span')[0].childNodes[0].nodeValue.charAt(0) == symbolClosed ){
+            eThis.getElementsByTagName('span')[0].childNodes[0].nodeValue = symbolOpened
+            eThis.parentNode.parentNode.parentNode.className = '';
+        } else{
+            eThis.getElementsByTagName('span')[0].childNodes[0].nodeValue = symbolClosed
+            eThis.parentNode.parentNode.parentNode.className = 'cl';
+        }
+        return false;
+    }
+
+    function eventClick(event) {
+        var targetElement = event.target || event.srcElement;
+        if (targetElement.tagName != 'A') {
+            targetElement = targetElement.parentElement;
+        }
+        if (targetElement.tagName == 'A') {
+            toggleTree(targetElement);
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        var treeviews = document.getElementsByClassName('treeview')
+        Array.prototype.forEach.call(treeviews, function(treeview) {
+            var symbolClosed = treeview.getAttribute('symbol-closed');
+            var symbolOpened = treeview.getAttribute('symbol-opened');
+            let lis = treeview.getElementsByTagName('li');
+            Array.prototype.forEach.call(lis, function(li) {
+                if (li.getElementsByTagName('ul').length == 0) {
+                    let newdiv = document.createElement('div');
+                    let newp = document.createElement('p');
+                    let newa = document.createElement('a');
+                    let newspan = document.createElement('span');
+                    newspan.innerHTML = symbolClosed;
+                    newa.className = 'sc';
+                    newa.setAttribute('department','root');
+                    newa.appendChild(newspan);
+                    let text = document.createTextNode(li.childNodes[0].nodeValue);
+                    newa.appendChild(text);
+                    newp.appendChild(newa);
+                    newdiv.appendChild(newp);
+                    li.childNodes[0].nodeValue = ''
+                    li.insertBefore(newdiv, li.firstChild);
+                    li.className = 'cl';
+                    li.getElementsByTagName('a')[0].addEventListener('click', function (event) {
+                        eventClick(event);
+                    });
+                }
+            });
+        });
+    });
+</script>
+<div class="treeview" symbol-closed="&#9658;" symbol-opened="&#9660;">
+    <ul>
+        <li>Сотрудники</li>
+    </ul>
+</div>
+  </body>
+</html>
