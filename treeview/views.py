@@ -46,13 +46,15 @@ def treeview_api_detal(request, eip):
                            'Размер заработной платы: {:,}'.format(detal.salary)]
     return HttpResponse(json.dumps(result), content_type="application/json")
 
+
 def treeview_root(request):
     departments = Department.objects.filter(level=0)
     result = {}
     if departments.count() > 0:
         result['departments'] = []
         for department in departments:
-            result['departments'].append({'id': department.id, 'name': department.name, 'child': not department.is_leaf_node()})
+            result['departments'].append({'id': department.id, 'name': department.name,
+                                          'child': not department.is_leaf_node()})
     return HttpResponse(json.dumps(result), content_type="application/json")
 
 
