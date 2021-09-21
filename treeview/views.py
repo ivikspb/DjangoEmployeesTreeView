@@ -1,9 +1,8 @@
-import json
 import os.path
 import random
 from datetime import datetime, timedelta
 
-from django.http import HttpResponse
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from .models import Department, Employee
 
@@ -31,7 +30,7 @@ def treeview_api(request, dip=None):
         result['employees'] = []
         for employee in employees:
             result['employees'].append({'id': employee.id, 'name': employee.name})
-    return HttpResponse(json.dumps(result), content_type="application/json")
+    return JsonResponse(result)
 
 
 def treeview_api_detal(request, eip):
@@ -44,7 +43,7 @@ def treeview_api_detal(request, eip):
         result['detal'] = [f'ФИО: {detal.name}', f'Должность: {detal.position}',
                            f'Дата приема на работу: {detal.hired_date.strftime("%d.%m.%Y")}',
                            'Размер заработной платы: {:,}'.format(detal.salary)]
-    return HttpResponse(json.dumps(result), content_type="application/json")
+    return JsonResponse(result)
 
 
 def treeview_root(request):
@@ -55,7 +54,7 @@ def treeview_root(request):
         for department in departments:
             result['departments'].append({'id': department.id, 'name': department.name,
                                           'child': not department.is_leaf_node()})
-    return HttpResponse(json.dumps(result), content_type="application/json")
+    return JsonResponse(result)
 
 
 def treeview_load_all(request):
